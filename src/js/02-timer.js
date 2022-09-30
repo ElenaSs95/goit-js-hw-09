@@ -2,78 +2,32 @@ import flatpickr from 'flatpickr';
 import 'flatpickr/dist/flatpickr.min.css';
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
 
-const refs = {
-  date: document.querySelector('#datetime-picker'),
-  startBtn: document.querySelector('[data-start]'),
-  displayDays: document.querySelector('[data-days]'),
-  displayHours: document.querySelector('[data-hours]'),
-  displayMinutes: document.querySelector('[data-minutes]'),
-  displaySeconds: document.querySelector('[data-seconds]'),
-};
+const text = document.querySelector('#datetime-picker');
+const timerHtml = document.querySelector('.timer');
+const btnStart = document.querySelector('button[data-start]');
+const seconds = document.querySelector('span[data-seconds]');
+const minutes = document.querySelector('span[data-minutes]');
+const hours = document.querySelector('span[data-hours]');
+const days = document.querySelector('span[data-days]');
 
-refs.startBtn.addEventListener('click', onStartBtnClick);
-
-let intervalId = null;
+btnStart.disabled = true;
 
 const options = {
   enableTime: true,
   time_24hr: true,
   defaultDate: new Date(),
   minuteIncrement: 1,
-  locale: {
-    firstDayOfWeek: 1,
-  },
-
   onClose(selectedDates) {
-    const selectedDate = selectedDates[0].getTime();
-    const currentDate = Date.now();
-    let deltaTime = selectedDate - currentDate;
-
-    if (deltaTime <= 0) Notify.failure('Please choose a date in the future');
-    else {
-      refs.startBtn.removeAttribute('disabled');
+    if (selectedDates[0] < new Date()) {
+      Notify.failure('Please choose a date in the future');
+      btnStart.disabled = true;
+    } else {
+      btnStart.disabled = false;
     }
   },
 };
 
-const targetDate = flatpickr(refs.date, options);
-refs.startBtn.setAttribute('disabled', '');
-
-function onStartBtnClick() {
-  outputTimer(targetDate.selectedDates[0].getTime());
-  intervalId = setInterval(
-    outputTimer,
-    1000,
-    targetDate.selectedDates[0].getTime()
-  );
-  refs.startBtn.setAttribute('disabled', '');
-  refs.date.setAttribute('disabled', '');
-  console.log(refs.startBtn);
-}
-
-function currentTimerValue(targetTime) {
-  return convertMs(targetTime - Date.now());
-}
-
-function displayTimer({ days, hours, minutes, seconds }) {
-  refs.displayDays.textContent = days;
-  refs.displayHours.textContent = pad(hours);
-  refs.displayMinutes.textContent = pad(minutes);
-  refs.displaySeconds.textContent = pad(seconds);
-  if (days === 0 && hours === 0 && minutes === 0 && seconds === 0) {
-    clearInterval(intervalId);
-    Notify.info('The time is over!');
-    refs.date.removeAttribute('disabled');
-  }
-}
-
-function outputTimer(selectedDate) {
-  displayTimer(currentTimerValue(selectedDate));
-}
-
-function pad(value) {
-  return String(value).padStart(2, '0');
-}
+flatpickr(text, options);
 
 function convertMs(ms) {
   const second = 1000;
@@ -91,3 +45,28 @@ function convertMs(ms) {
 
   return { days, hours, minutes, seconds };
 }
+
+function addLeadingZero(value) {
+  return value.toString().padStart(2, '0');
+}
+
+btnStart.addEventListener('click', () => {
+  let timer = setInterval(() => {
+    let countdown = new Date(text.value) - new Date();
+    btnStart.disabled = true;
+    if (countdown >= 0) {
+      let timeObject = convertMs(countdown);
+      days.textContent = addLeadingZero(timeObject.days);
+      hours.textContent = addLeadingZero(timeObject.hours);
+      minutes.textContent = addLeadingZero(timeObject.minutes);
+      seconds.textContent = addLeadingZero(timeObject.seconds);
+      if (countdown <= 10000) {
+        timerHtml.style.color = 'tomato';
+      }
+    } else {
+      Notify.success('Countdown finished');
+      timerHtml.style.color = 'black';
+      clearInterval(timer);
+    }
+  }, 1000);
+});
